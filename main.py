@@ -6,6 +6,7 @@ import json
 import subprocess
 from colorama import Fore, Back, Style
 from pathlib import Path
+from project_loader import WindowsPojectLoader, UnixProjectLoader
 
 
 cli_header = pyfiglet.figlet_format("Projects-CLI")
@@ -102,6 +103,7 @@ def remove_project():
 
 
 def open_project():
+    project_loader = None
     with open(PROJECTS+"\\projects.json", "r") as projects_file:
         projects = json.load(projects_file)
         projects_file.close()
@@ -114,43 +116,25 @@ def open_project():
         for i in range(len(projects)):
             if projects[i]['name'] == project_name:
                 project_path = projects[i]['path']
+        if o_s == 'nt':
+            project_loader = WindowsPojectLoader(project_path)
+        if o_s == 'posix':
+            project_loader = UnixProjectLoader(project_path)
+        #specific, looks for an 'env' directory but this could be named anything or not exist at all
+        #TODO
+        #handle non-python projects
+        #handle different environments
+        #ex a react project, a python project
+        #minimal functionality is to open 1 or more terminals in the project directory and load any environment
+        #variables required for the project
         if "env" in os.listdir(project_path):
+            print("found python environment")
             env_script = ".\env\\Scripts\\activate"
-        print(f"opening project:{project_name}")
-        if env_script:
-            cmd = ["wt",
-                   "-d",
-                   f"{project_path}",
-                   "powershell.exe",
-                   "-NoExit",
-                   "-Command", f".\\{env_script}",
-                   ";",
-                   "split-pane",
-                   "-V",
-                   "-d",
-                   f"{project_path}",
-                   "powershell.exe",
-                   "-NoExit",
-                   "-Command", f".\\{env_script}",
-                   ]
-            subprocess.run(cmd)
+            project_loader.open_project(env_script)
         else:
-            cmd = ["wt",
-                   "-d",
-                   f"{project_path}",
-                   "powershell.exe",
-                   "-NoExit",
-                   ";",
-                   "split-pane",
-                   "-V",
-                   "-d",
-                   f"{project_path}",
-                   "powershell.exe",
-                   "-NoExit",
-                   ]
-            subprocess.run(cmd)
+            project_loader.open_project()
+        print(f"opening project:{project_name}")
         exit(0)
-
 
 def set_quit():
     global quit_flag
